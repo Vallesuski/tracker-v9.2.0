@@ -35,7 +35,7 @@
 
                 @break
             @case('latest_topics')
-                @include('blocks.latest-topics')
+                {{-- @include('blocks.latest-topics') --}}
 
                 @break
             @case('latest_posts')
@@ -43,7 +43,7 @@
 
                 @break
             @case('latest_comments')
-                @include('blocks.latest-comments')
+                {{-- @include('blocks.latest-comments') --}}
 
                 @break
             @case('online')
