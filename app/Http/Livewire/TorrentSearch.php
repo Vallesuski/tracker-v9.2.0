@@ -37,6 +37,7 @@ use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Meilisearch\Client;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\MediaInfo;
 
 class TorrentSearch extends Component
 {
@@ -517,10 +518,37 @@ class TorrentSearch extends Component
                 $torrents = new LengthAwarePaginator($torrents, $results->getTotalHits(), $this->perPage, $this->getPage());
             }
 
-            // See app/Traits/TorrentMeta.php
-            $this->scopeMeta($torrents, withCredits: true);
+            /**
+         * Audio list flags
+         * Autor: Omar Abarca Arriaga
+         * Fecha: 13/10/2025
+         * Objetivo: Mostrar las banderas de los idiomas de las pistas de audio en la lista de torrents
+         * Descripción: Se parsea el mediainfo de cada torrent para extraer los idiomas de las pistas de audio
+         * y se almacena en una propiedad dinámica 'mediaInfoAudio' del modelo Torrent.
+         * Luego, en la vista, se itera sobre esta propiedad para mostrar las banderas correspondientes.
+         */
+        foreach ($torrents->items() as $torrent) {
+            $mediaInfoAudio = []; // Inicializamos
 
-            return $torrents;
+            if (!empty($torrent->mediainfo)) {
+                // Parseamos correctamente
+                $parsed = (new MediaInfo())->parse($torrent->mediainfo);
+
+                if (!empty($parsed['audio']) && is_array($parsed['audio'])) {
+                    foreach ($parsed['audio'] as $track) {
+                        $mediaInfoAudio[] = [
+                            'language' => $track['language'] ?? ''
+                        ];
+                    }
+                }
+            }
+            $torrent->mediaInfoAudio = $mediaInfoAudio;
+        }
+
+        // See app/Traits/TorrentMeta.php
+        $this->scopeMeta($torrents, withCredits: true);
+
+        return $torrents;
         }
     }
 
@@ -548,6 +576,7 @@ class TorrentSearch extends Component
                 ->selectRaw('MAX(bumped_at) as bumped_at')
                 ->selectRaw('MAX(created_at) as created_at')
                 ->selectRaw('SUM(times_completed) as times_completed')
+                ->addSelect('mediainfo')
                 ->selectRaw(<<<'SQL'
                 MIN(CASE
                     WHEN category_id IN (SELECT id FROM categories WHERE movie_meta = 1) THEN 'movie'
